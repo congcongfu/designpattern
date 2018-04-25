@@ -11,7 +11,6 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
-import com.caocao.util.business.core.ResultDTO;
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
 import io.reactivex.annotations.NonNull;
@@ -20,8 +19,6 @@ import io.reactivex.functions.Function3;
 /**
  * <p>文件名称: ObservableTest.java</p>
  * <p>文件描述: </p>
- * <p>版权所有: 版权所有(C)2016-2099</p>
- * <p>公   司: 优行科技</p>
  * <p>内容摘要: </p>
  * <p>其他说明: </p>
  * <p>完成日期: @Date 2018年04月05日</p>
@@ -380,27 +377,6 @@ public class ObservableTest {
 		});
 		source.onErrorResumeNext(fallBack)
 				.subscribe(s -> System.out.println("subscribe 3 " + s));
-	}
-
-
-	public static void testErrorResult() {
-		Observable<ResultDTO> resultDTOObservable = Observable.create(s -> {
-			for (int i = 0; i < 5; i++) {
-				s.onNext(new ResultDTO());
-				if (i == 3) {
-					s.onError(new RuntimeException("出错啦"));
-				}
-			}
-		});
-		resultDTOObservable.onErrorResumeNext(fallBackObservable())
-				.subscribe(System.out::println);
-	}
-
-	public static Observable<ResultDTO> fallBackObservable() {
-		ResultDTO resultDTO = new ResultDTO();
-		resultDTO.setCode(1);
-		resultDTO.setMsg("程序开小差");
-		return Observable.just(resultDTO);
 	}
 
 }
