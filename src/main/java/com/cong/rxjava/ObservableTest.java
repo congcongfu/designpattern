@@ -13,8 +13,10 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
+import io.reactivex.Scheduler;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.functions.Function3;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * <p>文件名称: ObservableTest.java</p>
@@ -35,9 +37,23 @@ public class ObservableTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-//		testCombineLatest();
-		testget();
-//		Thread.sleep(1000);
+		Observable<Long> source = Observable.create(s->{
+			for (long i = 0 ; i <10000; i++){
+				s.onNext(i);
+			}
+			s.onComplete();
+		});
+		source.observeOn(Schedulers.io())
+				.subscribe(driverNo->{
+					doSleep(driverNo);
+				});
+		System.in.read();
+	}
+
+	public static void doSleep(Long driverNo)throws Exception{
+		String log = Thread.currentThread()  +" "+driverNo+" ";
+		System.out.println(log);
+		Thread.sleep(60L);
 	}
 
 	public static void testget() {

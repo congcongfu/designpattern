@@ -7,6 +7,7 @@ package com.cong.rxjava;
 import io.reactivex.subjects.AsyncSubject;
 import io.reactivex.subjects.BehaviorSubject;
 import io.reactivex.subjects.ReplaySubject;
+import io.reactivex.subjects.Subject;
 
 /**
  * <p>文件名称: SubjectTest.java</p>
@@ -21,6 +22,13 @@ import io.reactivex.subjects.ReplaySubject;
  * @author by fu.cong@geely.com
  */
 public class SubjectTest {
+
+	public static void main(String[] args) {
+	}
+
+	public static void  testSubject(){
+		Subject subject = AsyncSubject.create().toSerialized();
+	}
 
 	public static void testAsyncSubject() {
 		AsyncSubject subject = AsyncSubject.create();
