@@ -4,6 +4,7 @@
  */
 package com.cong.rxjava;
 
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -13,8 +14,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import io.reactivex.Scheduler;
 import io.reactivex.annotations.NonNull;
+import io.reactivex.functions.BiFunction;
+import io.reactivex.functions.Function;
 import io.reactivex.functions.Function3;
 import io.reactivex.schedulers.Schedulers;
 
@@ -37,21 +41,20 @@ public class ObservableTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-		Observable<Long> source = Observable.create(s->{
-			for (long i = 0 ; i <10000; i++){
-				s.onNext(i);
-			}
-			s.onComplete();
-		});
-		source.observeOn(Schedulers.io())
-				.subscribe(driverNo->{
-					doSleep(driverNo);
-				});
-		System.in.read();
+		testScan();
+		Thread.sleep(10000);
 	}
 
-	public static void doSleep(Long driverNo)throws Exception{
-		String log = Thread.currentThread()  +" "+driverNo+" ";
+	private static Observable<String> stream(int initiaDelay, int interval, String name) {
+		return Observable
+				.interval(initiaDelay, interval, TimeUnit.MILLISECONDS)
+				.map(x -> name + x)
+				.doOnSubscribe((s) ->
+						System.out.println("Subscribe to " + name));
+	}
+
+	public static void doSleep(Long driverNo) throws Exception {
+		String log = Thread.currentThread() + " " + driverNo + " ";
 		System.out.println(log);
 		Thread.sleep(60L);
 	}
@@ -68,15 +71,15 @@ public class ObservableTest {
 		});
 		Long start = System.currentTimeMillis();
 		observable.subscribe(System.out::println);
-		System.out.println("1 耗时 "+(System.currentTimeMillis() -start)+" ms");
+		System.out.println("1 耗时 " + (System.currentTimeMillis() - start) + " ms");
 		start = System.currentTimeMillis();
 
 		observable.subscribe(System.out::println);
-		System.out.println("2 耗时 "+(System.currentTimeMillis() -start)+" ms");
+		System.out.println("2 耗时 " + (System.currentTimeMillis() - start) + " ms");
 
 		start = System.currentTimeMillis();
 		integerList.parallelStream().forEach(s -> System.out.println(getNextInteger(s)));
-		System.out.println("3 耗时 "+(System.currentTimeMillis() -start)+" ms");
+		System.out.println("3 耗时 " + (System.currentTimeMillis() - start) + " ms");
 
 	}
 
@@ -120,6 +123,73 @@ public class ObservableTest {
 		Thread.sleep(60000);
 	}
 
+	public static void testMap() {
+		Observable.just(8, 9, 10)
+				.doOnNext(i -> System.out.println("A: " + i))
+				.filter(i -> i % 3 > 0)
+				.doOnNext(i -> System.out.println("B: " + i))
+				.map(i -> "#" + i * 10)
+				.doOnNext(s -> System.out.println("C: " + s))
+				.filter(s -> s.length() < 4)
+				.subscribe(s -> System.out.println("D: " + s));
+	}
+
+	/**
+	 * 转换操做
+	 */
+	public static void testFlatMap() {
+		Observable<Integer> source = Observable.just(8, 9, 10);
+		source.flatMap(s -> Observable.just(s * 2)).subscribe(System.out::println);// 等同于map
+		source.flatMap(s -> (s != 10) ? Observable.just(s * 2) : Observable.empty()) //等同于 filter
+				.subscribe(System.out::println);
+	}
+
+	public static void testFloatMapConcurrent() {
+		Observable<Integer> source = Observable.create(s -> {
+			for (int i = 0; i < 1000; i++) {
+				s.onNext(i);
+			}
+			s.onComplete();
+		});
+		source.flatMap(s -> Observable.just(s + "fucker"), 10)
+				.delay(1, TimeUnit.MILLISECONDS)
+				.subscribe(System.out::println);
+	}
+
+	/**
+	 * 延迟操作
+	 * @throws Exception
+	 */
+	public static void testDelay() throws Exception { //并不保证有序
+		Observable.just(10L, 9L, 8L, 7L, 6L, 5L, 3L, 4L, 2L, 1L)
+				.flatMap(x -> Observable.just(x).delay(x, TimeUnit.SECONDS))
+				.subscribe(System.out::println);
+		System.out.println("fuck");
+		Thread.sleep(20000);
+	}
+
+	/**
+	 * 合并一次发射一次结果
+	 */
+	public static void testScan() {
+		Observable<Integer> source = Observable.range(10, 20);
+		source.subscribe(System.out::println);
+		source.scan((item1, item2) -> item1 + item2)
+				.subscribe(s -> System.out.println("scan " + s));
+	}
+
+	/**
+	 * 所有结果处理完一次输出
+	 */
+	public static void testReduce() {
+		Observable<Integer> source = Observable.range(10, 20);
+		source.reduce((item1, item2) -> item1 + item2)
+				.subscribe(System.out::println);
+
+	}
+
+	public static void testCollect() {
+	}
 
 	/**
 	 * 控制采样
