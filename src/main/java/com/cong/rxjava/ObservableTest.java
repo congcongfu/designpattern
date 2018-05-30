@@ -21,6 +21,7 @@ import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import io.reactivex.functions.Function3;
 import io.reactivex.schedulers.Schedulers;
+import javafx.beans.binding.StringBinding;
 
 /**
  * <p>文件名称: ObservableTest.java</p>
@@ -41,7 +42,7 @@ public class ObservableTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-		testScan();
+		testContains();
 		Thread.sleep(10000);
 	}
 
@@ -188,7 +189,18 @@ public class ObservableTest {
 
 	}
 
+	/**
+	 * 把元素都收集起来
+	 */
 	public static void testCollect() {
+		Observable<Integer> source = Observable.create(s -> {
+			for (int i = 10; i < 25; i++) {
+				s.onNext(i);
+			}
+			s.onComplete();
+		});
+		source.collect(ArrayList::new, List::add)
+				.subscribe(System.out::println);
 	}
 
 	/**
@@ -201,7 +213,6 @@ public class ObservableTest {
 		})
 				.sample(1, TimeUnit.SECONDS)
 				.subscribe(System.out::println);
-
 	}
 
 	/**
@@ -218,6 +229,51 @@ public class ObservableTest {
 				.subscribe(s -> {
 					System.out.println(s);
 				});
+	}
+
+	public static void takeFirst() {
+		Observable<Integer> source = Observable.just(1, 2, 3, 4, 5, 6, 7);
+		source.firstElement().subscribe(System.out::println);
+	}
+
+	/**
+	 * 一直到某个条件后停止订阅
+	 */
+	public static void takeUntil() {
+		Observable<Integer> source = Observable.just(1, 2, 3, 4, 5, 6, 7);
+		source.takeUntil(d -> (d == 2)).subscribe(System.out::println);
+	}
+
+	/**
+	 * 只订阅满足条件的,该条件和该条件之后不订阅
+	 */
+	public static void takeWhile() {
+		Observable<Integer> source = Observable.just(1, 2, 3, 4, 5, 6, 7);
+		source.takeWhile(d -> (d != 3)).subscribe(System.out::println);
+	}
+
+	/**
+	 * 元素都满足要求
+	 */
+	public static void testAll() {
+		Observable<Integer> source = Observable.just(1, 2, 3, 4, 5, 6, 7);
+		source.all(d -> d < 9).subscribe(System.out::println);
+	}
+
+	/**
+	 * 元素任何一个都满足要求
+	 */
+	public static void testAny() {
+		Observable<Integer> source = Observable.just(1, 2, 3, 4, 5, 6, 7);
+		source.any(d -> d > 10).subscribe(System.out::println);
+	}
+
+	/**
+	 * 存在元素
+	 */
+	public static void testContains() {
+		Observable<Integer> source = Observable.just(1, 2, 3, 4, 5, 6, 7, 10, 10);
+		source.contains(10).subscribe(System.out::println);
 	}
 
 	/**
@@ -291,10 +347,14 @@ public class ObservableTest {
 				.subscribe(System.out::println);
 	}
 
+	/**
+	 * 合并两个数据源
+	 */
 	public static void testMerge() {
 		Observable<Integer> source1 = Observable.create(s -> {
 			for (int i = 1; i < 15; i++) {
 				s.onNext(i * 2);
+				System.out.println("source1  " + (i * 2));
 			}
 			s.onComplete();
 		});
@@ -302,18 +362,15 @@ public class ObservableTest {
 		Observable<Integer> source2 = Observable.create(s -> {
 			for (int i = 1; i < 15; i++) {
 				s.onNext(i * 2 + 1);
+				System.out.println("source2 " + (i * 2 + 1));
 			}
 			s.onComplete();
 		});
 
 		Observable.merge(source2, source1)
-				.sorted()
+//				.sorted()
 				.subscribe(System.out::println)
 		;
-
-		Observable.mergeDelayError(source1, source2)
-				.sorted()
-				.subscribe(System.out::println);
 
 	}
 
