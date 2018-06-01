@@ -7,21 +7,27 @@ package com.cong.rxjava;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.Scheduler;
 import io.reactivex.annotations.NonNull;
+import io.reactivex.functions.Action;
 import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Function;
 import io.reactivex.functions.Function3;
 import io.reactivex.schedulers.Schedulers;
 import javafx.beans.binding.StringBinding;
+import org.apache.commons.lang3.tuple.Pair;
 
 /**
  * <p>文件名称: ObservableTest.java</p>
@@ -42,9 +48,43 @@ public class ObservableTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-		testContains();
-		Thread.sleep(10000);
+		Observable<String> alice = speek("To be, or not to be: that is the question", 110);
+		Observable<String> bob = speek("Though this be madnes, yet there is method is't", 90);
+		Observable<String> jane = speek("There are more thing is Haven and Earth, Horatio," +
+				"than are dreamt of in your philosophy", 100);
+		Long time = System.currentTimeMillis();
+//		Observable.merge(
+//				alice.map(w ->"Alice: "+w),
+//				bob.map(w -> "Bob: "+w),
+//				jane.map(w->"Jane: "+w)
+//		).doOnTerminate(()->System.out.println("耗时: "+(System.currentTimeMillis() -time) +" ms"))
+//				.subscribe(System.out::println);
+		Random rnd = new Random();
+		Observable<Observable<String>> quotes = Observable.just(
+				alice.map(w -> "Alice: " + w),
+				bob.map(w -> "Bob: " + w),
+				jane.map(w -> "Jane: " + w)
+		).flatMap(Observable::just)
+				.delay(2,TimeUnit.SECONDS);
+		Observable.switchOnNext(quotes)
+//				.doOnNext(s->System.out.println("     "+s))
+				.subscribe(System.out::println);
+
+		Thread.sleep(100000);
 	}
+
+	private static Observable<String> speek(String quote, long millisPerchar) {
+		String[] tokens = quote.replaceAll("[:,]", "").split(" ");
+		Observable<String> words = Observable.fromArray(tokens);
+		Observable<Long> absoluteDelay = words
+				.map(String::length)
+				.map(len -> len * millisPerchar)
+				.scan((total, current) -> total + current);
+		return words.zipWith(absoluteDelay.startWith(0L), Pair::of)
+				.flatMap(pair -> Observable.just(pair.getLeft())
+						.delay(pair.getRight(), TimeUnit.MILLISECONDS));
+	}
+
 
 	private static Observable<String> stream(int initiaDelay, int interval, String name) {
 		return Observable
@@ -152,7 +192,7 @@ public class ObservableTest {
 			}
 			s.onComplete();
 		});
-		source.flatMap(s -> Observable.just(s + "fucker"), 10)
+		source.flatMap(s -> Observable.just(s + "fucker"), 10)  //限制并发
 				.delay(1, TimeUnit.MILLISECONDS)
 				.subscribe(System.out::println);
 	}
@@ -310,6 +350,27 @@ public class ObservableTest {
 		Flowable.just("Rxjava 2.x Flowable").subscribe(System.out::println);
 	}
 
+	/**
+	 * 处理完一个流再处理下一个流
+	 */
+	public static void testContact() {
+		Observable<Integer> source1 = Observable.just(1, 3, 5, 7, 9);
+		Observable<Integer> source2 = Observable.create(s -> {
+			for (int i = 0; i < 6; i++) {
+				s.onNext(i * 2);
+				Thread.sleep(23);
+			}
+			s.onComplete();
+		});
+
+		Observable.concat(source2, source1)
+				.subscribe(System.out::println);
+		System.out.println("************************************");
+		Observable.merge(source1, source2)
+				.sorted()
+				.subscribe(System.out::println);
+	}
+
 	public static void testOnError1() {
 		Observable<Long> source = Observable.create(e -> {
 			while (!e.isDisposed()) {
@@ -348,13 +409,13 @@ public class ObservableTest {
 	}
 
 	/**
-	 * 合并两个数据源
+	 * 合并两个数据源, merge 是阻塞的,多个流都处理完之后才发送
 	 */
 	public static void testMerge() {
 		Observable<Integer> source1 = Observable.create(s -> {
 			for (int i = 1; i < 15; i++) {
-				s.onNext(i * 2);
-				System.out.println("source1  " + (i * 2));
+				s.onNext(i * 2 + 1);
+				Thread.sleep(200);
 			}
 			s.onComplete();
 		});
@@ -362,15 +423,24 @@ public class ObservableTest {
 		Observable<Integer> source2 = Observable.create(s -> {
 			for (int i = 1; i < 15; i++) {
 				s.onNext(i * 2 + 1);
-				System.out.println("source2 " + (i * 2 + 1));
+				Thread.sleep(100);
 			}
 			s.onComplete();
 		});
 
-		Observable.merge(source2, source1)
-//				.sorted()
-				.subscribe(System.out::println)
-		;
+		Observable<Integer> source3 = Observable.create(s -> {
+			for (int i = 1; i < 15; i++) {
+				s.onNext(i * 2 + 1);
+				Thread.sleep(50);
+			}
+			s.onComplete();
+		});
+		Long time = System.currentTimeMillis();
+		Observable.merge(source2.map(num -> "source2: " + num),
+				source1.map(num -> "source1: " + num),
+				source3.map(num -> "source3: " + num))
+				.doOnComplete(() -> System.out.println("耗时: " + (System.currentTimeMillis() - time)))
+				.subscribe(System.out::println);
 
 	}
 
