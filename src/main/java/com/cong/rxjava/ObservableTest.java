@@ -19,6 +19,7 @@ import com.google.common.collect.Sets;
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
+import io.reactivex.ObservableTransformer;
 import io.reactivex.Scheduler;
 import io.reactivex.annotations.NonNull;
 import io.reactivex.functions.Action;
@@ -48,29 +49,11 @@ public class ObservableTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-		Observable<String> alice = speek("To be, or not to be: that is the question", 110);
-		Observable<String> bob = speek("Though this be madnes, yet there is method is't", 90);
-		Observable<String> jane = speek("There are more thing is Haven and Earth, Horatio," +
-				"than are dreamt of in your philosophy", 100);
-		Long time = System.currentTimeMillis();
-//		Observable.merge(
-//				alice.map(w ->"Alice: "+w),
-//				bob.map(w -> "Bob: "+w),
-//				jane.map(w->"Jane: "+w)
-//		).doOnTerminate(()->System.out.println("耗时: "+(System.currentTimeMillis() -time) +" ms"))
-//				.subscribe(System.out::println);
-		Random rnd = new Random();
-		Observable<Observable<String>> quotes = Observable.just(
-				alice.map(w -> "Alice: " + w),
-				bob.map(w -> "Bob: " + w),
-				jane.map(w -> "Jane: " + w)
-		).flatMap(Observable::just)
-				.delay(2,TimeUnit.SECONDS);
-		Observable.switchOnNext(quotes)
-//				.doOnNext(s->System.out.println("     "+s))
+		Observable<Character> alphabet = Observable.range(0,'Z'-'A'+1)
+				.map(c->(char)('A'+c));
+//		alphabet.forEach(System.out::println);
+		alphabet.compose(odd())
 				.subscribe(System.out::println);
-
-		Thread.sleep(100000);
 	}
 
 	private static Observable<String> speek(String quote, long millisPerchar) {
@@ -239,8 +222,8 @@ public class ObservableTest {
 			}
 			s.onComplete();
 		});
-		source.collect(ArrayList::new, List::add)
-				.subscribe(System.out::println);
+		source.collect(ArrayList::new, List::add);
+//				.subscribe(System.out::println);
 	}
 
 	/**
@@ -477,6 +460,20 @@ public class ObservableTest {
 		source.zipWith(source1, (s, s2) -> s + "_" + s2)
 				.zipWith(source2, (zips, s3) -> zips + "_" + s3)
 				.subscribe(System.out::println);
+	}
+
+	public static <T> Observable<T> odd(Observable<T> upStream){
+		Observable<Boolean> trueFalse = Observable.just(true,false).repeat();
+		return upStream.zipWith(trueFalse,Pair::of)
+				.filter(Pair::getRight)
+				.map(Pair::getLeft);
+	}
+
+	private static  <T> ObservableTransformer<T,T> odd(){
+		Observable<Boolean> trueFalse = Observable.just(true,false).repeat();
+		return upstream -> upstream.zipWith(trueFalse,Pair::of)
+				.filter(Pair::getRight)
+				.map(Pair::getLeft);
 	}
 
 	/**
