@@ -4,30 +4,20 @@
  */
 package com.cong.rxjava;
 
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import io.reactivex.Flowable;
 import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
 import io.reactivex.ObservableTransformer;
-import io.reactivex.Scheduler;
 import io.reactivex.annotations.NonNull;
-import io.reactivex.functions.Action;
 import io.reactivex.functions.BiFunction;
-import io.reactivex.functions.Function;
+import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function3;
-import io.reactivex.schedulers.Schedulers;
-import javafx.beans.binding.StringBinding;
 import org.apache.commons.lang3.tuple.Pair;
 
 /**
@@ -49,11 +39,7 @@ public class ObservableTest {
 	}
 
 	public static void main(String[] args) throws Exception {
-		Observable<Character> alphabet = Observable.range(0,'Z'-'A'+1)
-				.map(c->(char)('A'+c));
-//		alphabet.forEach(System.out::println);
-		alphabet.compose(odd())
-				.subscribe(System.out::println);
+		testBufferByTime();
 	}
 
 	private static Observable<String> speek(String quote, long millisPerchar) {
@@ -94,6 +80,12 @@ public class ObservableTest {
 			});
 		});
 		Long start = System.currentTimeMillis();
+		observable.subscribe(new Consumer<Integer>() {
+			@Override
+			public void accept(Integer integer) throws Exception {
+
+			}
+		});
 		observable.subscribe(System.out::println);
 		System.out.println("1 耗时 " + (System.currentTimeMillis() - start) + " ms");
 		start = System.currentTimeMillis();
@@ -462,16 +454,16 @@ public class ObservableTest {
 				.subscribe(System.out::println);
 	}
 
-	public static <T> Observable<T> odd(Observable<T> upStream){
-		Observable<Boolean> trueFalse = Observable.just(true,false).repeat();
-		return upStream.zipWith(trueFalse,Pair::of)
+	public static <T> Observable<T> odd(Observable<T> upStream) {
+		Observable<Boolean> trueFalse = Observable.just(true, false).repeat();
+		return upStream.zipWith(trueFalse, Pair::of)
 				.filter(Pair::getRight)
 				.map(Pair::getLeft);
 	}
 
-	private static  <T> ObservableTransformer<T,T> odd(){
-		Observable<Boolean> trueFalse = Observable.just(true,false).repeat();
-		return upstream -> upstream.zipWith(trueFalse,Pair::of)
+	private static <T> ObservableTransformer<T, T> odd() {
+		Observable<Boolean> trueFalse = Observable.just(true, false).repeat();
+		return upstream -> upstream.zipWith(trueFalse, Pair::of)
 				.filter(Pair::getRight)
 				.map(Pair::getLeft);
 	}
@@ -587,6 +579,55 @@ public class ObservableTest {
 		});
 		source.onErrorResumeNext(fallBack)
 				.subscribe(s -> System.out.println("subscribe 3 " + s));
+	}
+
+	/**
+	 * 先缓存再发射,必须缓存满了才能消费
+	 * 混存之后发射的是list
+	 */
+	public static void testBuffer() throws Exception {
+
+		Observable<Integer> source = Observable
+				.create(s -> {
+					for (int i = 0; i < 22; i++) {
+						System.out.println(i + " 发射" + " " + Thread.currentThread().getName());
+						s.onNext(i);
+					}
+					s.onComplete(); //表示发射结束,即使继续发射也不会有数据
+				});
+		source.buffer(4)
+				.subscribe(list -> {
+					System.out.println("size " + list.size() + " data :" + list + " " + Thread.currentThread().getName
+							());
+				});
+		Thread.sleep(100);
+	}
+
+	public static void testRepeat() {
+		Random random = new Random();
+		Observable.defer(() -> Observable.just(random.nextGaussian()))
+				.repeat(1000)
+				.buffer(100, 1)
+				.map(data -> averageOfList(data))
+				.subscribe(System.out::println);
+	}
+
+	private static Double averageOfList(List<Double> doubleList) {
+		return doubleList.stream()
+				.collect(Collectors.averagingDouble(x -> x));
+	}
+
+	public static void testBufferByTime() {
+		Observable<String> names = Observable.just("Frank", "LaLa", "June", "Jane", "Tom", "Tim", "James", "Tank",
+				"Jack", "Smith");
+
+		Observable<Long> delays = Observable.just(0.1, 0.6, 0.9, 1.1, 3.3, 3.4, 3.5, 3.6, 4.4, 4.8)
+				.map(d -> (long) (d * 1_000));
+		Observable.zip(names, delays,
+				(name, delay) -> Observable.just(name).buffer(delay, TimeUnit.MILLISECONDS))
+				.map(o->o)
+				.buffer(1,TimeUnit.SECONDS)
+				.subscribe(System.out::println);
 	}
 
 }

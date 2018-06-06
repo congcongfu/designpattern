@@ -21,6 +21,11 @@ import io.reactivex.schedulers.Schedulers;
  */
 public class SingleTest {
 
+	public static void main(String[] args) throws Exception{
+		merge2();
+		Thread.sleep(100);
+	}
+
 	public static Single<String> getDataA() {
 		return Single.<String>create(o -> {
 			o.onSuccess("DataA");
@@ -41,8 +46,5 @@ public class SingleTest {
 		Single.merge(getDataA(), getDataB()).forEach(s -> System.out.println("merge " + s));
 	}
 
-	public static void main(String[] args) {
-		merge1();
-		merge2();
-	}
+
 }
