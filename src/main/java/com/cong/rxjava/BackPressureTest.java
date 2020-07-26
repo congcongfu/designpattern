@@ -15,7 +15,7 @@ import io.reactivex.schedulers.Schedulers;
  * <p>完成日期: @Date 2018年04月11日</p>
  *
  * @since 3.0
- * @author by fu.cong@geely.com
+ * 
  */
 public class BackPressureTest {
 

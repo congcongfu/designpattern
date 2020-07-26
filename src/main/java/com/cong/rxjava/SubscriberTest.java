@@ -18,7 +18,7 @@ import org.reactivestreams.Subscription;
  * <p>完成日期: @Date 2018年04月22日</p>
  *
  * @since 3.0
- * @author by fu.cong@geely.com
+ * 
  */
 public class SubscriberTest {
 

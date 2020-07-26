@@ -22,7 +22,7 @@ import io.reactivex.subjects.Subject;
  * <p>完成日期: @Date 2018年03月06日</p>
  *
  * @since 3.0
- * @author by fu.cong@geely.com
+ * 
  */
 public class HelloWord {
 

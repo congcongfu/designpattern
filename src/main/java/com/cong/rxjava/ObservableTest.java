@@ -28,7 +28,7 @@ import org.apache.commons.lang3.tuple.Pair;
  * <p>完成日期: @Date 2018年04月05日</p>
  *
  * @since 3.0
- * @author by fu.cong@geely.com
+ * 
  */
 public class ObservableTest {
 

@@ -1,4 +1,4 @@
-/**
+ /**
  * Company
  * Copyright (C) 2004-2018 All Rights Reserved.
  */
@@ -15,7 +15,7 @@ import java.util.Iterator;
  * <p>完成日期: @Date 2018年04月21日</p>
  *
  * @since 3.0
- * @author by fu.cong@geely.com
+ * 
  */
 public class NaturalNumbersIterator implements Iterator<BigInteger> {
 
